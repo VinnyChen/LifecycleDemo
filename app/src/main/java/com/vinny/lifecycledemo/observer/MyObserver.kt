@@ -33,23 +33,23 @@ class MyObserver : LifecycleObserver {
      */
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onStart() {
-        Log.d(TAG, "===onCreated===")
+        Log.d(TAG, "===onStart===")
     }
 
     /**
      * onResume:监听onResume生命周期事件
      */
     @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
-    fun onResumeListener() {
-        Log.e(TAG, "===onResume===")
+    fun onResume() {
+        Log.d(TAG, "===onResume===")
     }
 
     /**
      * ON_PAUSE:监听onPause生命周期事件
      */
     @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-    fun onPauseListener() {
-        Log.e(TAG, "===onPause===")
+    fun onPause() {
+        Log.d(TAG, "===onPause===")
     }
 
     /**
