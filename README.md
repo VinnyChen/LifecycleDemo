@@ -4,8 +4,6 @@ Lifecycle框架详解
 ## 一、简介
 > Lifecycle是一个生命周期感知组件，可以感知Activity和Fragment等组件的生命周期，并且将感知到的变化通知观察者LifecycleObserver，减少内存泄漏的可能，增强代码的稳定性
 
-$\color{#FF0000}{2}$
-
 ## 二、几个重要的类和接口
 **lifecycle：**
 
