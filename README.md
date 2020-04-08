@@ -1,210 +1,101 @@
 # LifecycleDemo
 Lifecycle框架详解
 
-## 一、简介
-> Lifecycle是一个生命周期感知组件，可以感知Activity和Fragment等组件的生命周期，并且将感知到的变化通知观察者LifecycleObserver，减少内存泄漏的可能，增强代码的稳定性
+## 一、干什么的？
+> LiveData是一种具有生命感知能力的，可观察的数据存储器类，通常用于ViewModel向界面控制器通信
 
-## 二、几个重要的类和接口
-**lifecycle：**
++ 具有生命感知能力？
+    + 指遵循其它组件的生命周期（Activity/Fragment等） 
++ 可观察的数据存储类？
+    + 内部存储有一个可观察的Data对象，作为被观察者，一旦感知到变化，会通知观察者
++ 通信？
+    + 创建一个观察者Observer，与LiveData达成订阅关系，可实现通信   
+## 二、怎么来的？
+    
++ 普通的被观察者无法感知应用组件的生命周期，会导致一些不必要的操作，进而产生内存泄漏甚至直接发生崩溃；而LiveData可以感知应用组件的生命周期，即可以根据应用组件的生命周期来决定是否更新UI
++ activity/Fragment中，需要在生命周期中做的操作很多，比如，MVP中presenter的注册与释放，MediaPlayer的注册与释放等等，这些可能根据组件生命周期变化的操作管理起来很麻烦，于是LiveData就应运而生，通过LiveData就不需要相关组件的生命周期都去操作一次
 
+## 三、优势在哪儿？
+从LiveData的来源中可以知道优势：
++ 不再需要手动处理生命周期，如Presenter
++ 因为可以感知组件生命周期，可以避免内存泄漏，因为LiveData只更新处于生命周期活跃的组件观察者
++ 始终展示最新数据，非活跃状态切换到活跃状态会接收最新数据
++ 配置更改（如：屏幕旋转）也不会影响数据的更新
++ 共享资源，事件总线（不建议使用）
 
-+ 抽象类
-+ 定义了订阅方法 **addObserver()**,取消订阅方法 **removeObserver()** 等
-+ 定义了获取当前状态的方法 **getCurrentState()**
-+ 定义了Event枚举和State枚举
-+ 被观察者
+## 四、相关类介绍
+**MutableLiveData：**
++ 继承自LiveData
++ 提供改变容器内容的接口（setValue()/postValue()）
 
-**LifecycleOwner**
-+ 接口，Lifecycle的持有者
-+ 生命周期的提供者
-+ 定义了获取Lifecycle的抽象方法
-+ 需要获取Lifecycle的类都需要实现该方法
-
-**LifecycleObserver**
-+ 接口，其中没有定义方法
-+ 生命周期的观察者，通过@OnLifecycleEvent注解方法 来接收生命周期事件
-+ 开发者可自定义方法，添加注解来接收对应的生命周期事件
-
-**LifecycleRegistry**
-+ Lifecycle的子类，getLifecycle()实质获取的实例
-+ 真正的被观察者
-
-**Event**
-+ 生命周期事件，映射Activity/Fragment中的生命周期
-+ 包含：**ON_CREATE**、**ON_START**、**ON_RESUME**、**ON_PAUSE**、**ON_STOP**、**ON_DESTROY**、**ON_ANY**（可以接收所有生命周期事件）
-+ 当state发生变化时，会向已经注册的LifecycleObserver发送事件
-
-**State**
-+  生命周期状态
-    + **DESTROYED** ondestory的执行
-    + **INITIALIZED** 被构造之后，onCreate执行之前
-    + **CREATED** onCreate，onStop的执行
-    + **STARTED** onStart，onPause的执行
-    + **RESUMED** onResume的执行
-## 三、使用步骤
-### 1.自定义一个类MyObserver实现LifecycleObserver
-
+**MediatorLiveData：**
++ 继承自MutableLiveData
++ 可以同时监听多个LiveData的变化，通过addSource()添加LiveData，以达到同时监听多个LiveData
++ 
+## 五、如何使用
+#### **单独使用：**
+1. 创建LiveData实例
+ ```
+ // 第一步：创建LiveData实例
+ val liveData = MutableLiveData<String>()
+ ```
+2. 创建观察者对象observer
 ```
-/**
- * Description : MyObserver 观察者，用来监听Activity或者Fragment的生命周期
- * Created : CGG
- * Time : 2020/4/2
- * Version : 0.0.1
- */
-class MyObserver : LifecycleObserver {
-    /**
-     * LifecycleObserver:生命周期观察者接口
-     */
+// 第二步：创建observer
+val observer = Observer<String>() { value ->
+    tv_data.text = value
+}
+```
+3. 注册/订阅
+```
+// 第三步，注册，订阅，关联observer和liveData
+// 参数一为LifecycleOwner，AppCompatActivity默认已经实现,否则需要自己实现LifecycleOwner
+liveData.observe(this,observer)
+```
+4. 更新数据(setValue()/postValue()
+```
+//第四步：修改数据，更新UI
+liveData.value = "修改成功"
+```
 
-    private val TAG = "MyObserver"
+#### **通常与ViewModel连用：**
+1. 创建MyViewModel类继承自ViewModel
++ 在MyViewModel中创建LiveData
++ 对外提供一个get方法获取LiveData实例
+```
+class MyViewModel: ViewModel() {
 
-    /**
-     * onCreate 方法名称自定义
-     * 注解参数： 需要监听的是什么生命周期事件
-     * ON_CREATE:接收onCreate生命周期的事件
-     */
-    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
-    fun onCreate() {
-        Log.d(TAG, "===onCreate===")
-    }
+    private var myLiveData:MutableLiveData<String> = MutableLiveData()
 
-    /**
-     *ON_START:监听onStart生命周期事件
-     */
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    fun onStart() {
-        Log.d(TAG, "===onCreated===")
-    }
-
-    /**
-     * onResume:监听onResume生命周期事件
-     */
-    @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
-    fun onResume() {
-        Log.e(TAG, "===onResume===")
-    }
-
-    /**
-     * ON_PAUSE:监听onPause生命周期事件
-     */
-    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-    fun onPause() {
-        Log.e(TAG, "===onPause===")
-    }
-
-    /**
-     * ON_STOP:监听onStop生命周期事件
-     */
-    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
-    fun onStop() {
-        Log.d(TAG, "===onStop===")
-    }
-
-    /**
-     * ON_ANY:可接收任意生命周期的事件
-     */
-    @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
-    fun onAny() {
-        Log.d(TAG, "===onAny===")
+    fun getMyLiveData(): MutableLiveData<String> {
+        return myLiveData
     }
 
 }
 ```
-
-### 2.获取Lifecycle(实际上是获取LifecycleRegistry)
-
-+ 如果继承的是AppCompatActivity，且版本大于等于26.1.0
-    + 可直接获取lifecycle， 因为AppCompatActivity中已经默认实现
+2. 创建MyViewModel实例
 ```
-class LifecycleUsedAppCompatActivity:AppCompatActivity() {
-
-    private lateinit var mLifecycle: Lifecycle
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_lifecycle_use_appcompat)
-        // lifecycle：管理Activity和Fragment的生命周期
-        // 1.获取lifecycle:
-        mLifecycle = lifecycle
-        // 2.注册监听
-        lifecycle.addObserver(MyObserver())
-    }
-
+myViewModel = ViewModelProvider(this).get(MyViewModel::class.java)
+```
+3. 创建观察者对象
+```
+val nameObserver = Observer<String>(){ value ->
+    tv_data.text = value
 }
 ```
-+ Activity中，或者AppCompatActivity中且版本小于26.1.0
-    + 则需要自己实现LifecycleOwner接口
-    + 并且，事件的分发也需要自己去实现，如下：
+4. 注册/订阅
 ```
-/**
- * Description : LifecycleUsedActivity lifecycle适用于继承自Activity中
- * Created : CGG
- * Time : 2020/4/7
- * Version : 0.0.1
- */
-class LifecycleUsedActivity:Activity(),LifecycleOwner {
-
-    private lateinit var mLifecycleRegistry:LifecycleRegistry
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // 1.创建LifecycleRegistry
-        mLifecycleRegistry = LifecycleRegistry(this)
-        // 2.处理生命周期事件
-        mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-        // 3.注册监听
-        mLifecycleRegistry.addObserver(MyObserver())
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // 2.处理生命周期事件
-        mLifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-    }
-
-    override fun getLifecycle(): Lifecycle {
-        return mLifecycleRegistry
-    }
-}
+myViewModel.getMyLiveData().observe(this,nameObserver)
 ```
-
-### 3.注册，订阅
-
+5. 更新数据
 ```
-mLifecycle.addObserver(MyObserver())
+myViewModel.getMyLiveData().value = "修改成功"
 ```
-或者
-```
-mLifecycleRegistry.addObserver(MyObserver())
-```
+## 六、应用场景
+本质：都是需要在组件不同生命周期做相应操作的
++ MVP中的Presenter
++ MediaPlayer
++ 开始和停止缓冲视频
++ 开始和停止网络连接暂停和恢复动画可绘制资源
 
-**运行查看结果：**
-+ AppCompatActivity中：
-```
-2020-04-07 11:52:18.773 8551-8551/com.vinny.lifecycledemo D/MyObserver: ===onCreate===
-2020-04-07 11:52:18.773 8551-8551/com.vinny.lifecycledemo D/MyObserver: ===onAny===
-2020-04-07 11:52:18.782 8551-8551/com.vinny.lifecycledemo D/MyObserver: ===onStart===
-2020-04-07 11:52:18.782 8551-8551/com.vinny.lifecycledemo D/MyObserver: ===onAny===
-2020-04-07 11:52:18.785 8551-8551/com.vinny.lifecycledemo D/MyObserver: ===onResume===
-2020-04-07 11:52:18.785 8551-8551/com.vinny.lifecycledemo D/MyObserver: ===onAny===
-2020-04-07 11:52:19.046 8551-8551/com.vinny.lifecycledemo D/MyObserver: ===onStop===
-2020-04-07 11:52:19.046 8551-8551/com.vinny.lifecycledemo D/MyObserver: ===onAny===
-```
-+ Activity中：
-```
-2020-04-07 11:57:37.261 9281-9281/com.vinny.lifecycledemo D/MyObserver: ===onCreate===
-2020-04-07 11:57:37.261 9281-9281/com.vinny.lifecycledemo D/MyObserver: ===onAny===
-2020-04-07 11:57:37.289 9281-9281/com.vinny.lifecycledemo D/MyObserver: ===onStart===
-2020-04-07 11:57:37.289 9281-9281/com.vinny.lifecycledemo D/MyObserver: ===onAny===
-```
-
-由以上结果我们可以看出：
-1. Activity的生命周期与lifecycle已经关联起来了
-2. onAny可以接收所有生命周期的事件
-
-
-最后，
-
-[代码直通车](https://github.com/VinnyChen/LifecycleDemo)
-
-**注意：Tag切换到v1.0**
+## 七、源码解读

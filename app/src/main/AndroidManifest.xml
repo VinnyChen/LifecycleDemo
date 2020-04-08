@@ -18,6 +18,8 @@
     </activity>
       <activity android:name=".lifecycle.LifecycleUsedAppCompatActivity" />
     <activity android:name=".lifecycle.LifecycleUsedActivity" />
+    <activity android:name=".livedata.LiveDataActivity" />
+    <activity android:name=".livedata.LiveDataViewModelActivity" />
   </application>
 
 </manifest>
