@@ -23,6 +23,7 @@
     <activity android:name=".livedata.LiveDataActivity" />
     <activity android:name=".livedata.LiveDataViewModelActivity" />
       <activity android:name=".livedata.TicketLiveDataActivity" />
+    <activity android:name=".livedata.MediatorLiveDataActivity" />
   </application>
 
 </manifest>

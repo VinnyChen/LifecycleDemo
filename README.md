@@ -1,6 +1,4 @@
 # LifecycleDemo
-Lifecycle框架详解
-
 ## 一、干什么的？
 > LiveData是一种具有生命感知能力的，可观察的数据存储器类，通常用于ViewModel向界面控制器通信
 
@@ -91,7 +89,197 @@ myViewModel.getMyLiveData().observe(this,nameObserver)
 ```
 myViewModel.getMyLiveData().value = "修改成功"
 ```
-## 六、应用场景
+
+## 六、扩展LiveData
+有的时候，我们想要在onInActive()或者onActive()中做一些别的操作（如注册与取消广播），此时我们就需要对LiveData进行扩展,通过继承LiveData或者MutableLiveData实现扩展
+
+**TicketLiveData：**
+
+```
+class TicketLiveData : LiveData<String>() {
+
+    private var ticketManager: RobTicketManager = RobTicketManager()
+
+    private val listener = object : TicketListener {
+        override fun onSurplusTicketChanged(num:Int) {
+            super.onSurplusTicketChanged(num)
+            if(num > 0){
+                value = "开始抢票了..."
+            }
+        }
+    }
+
+
+    override fun onActive() {
+        super.onActive()
+        ticketManager.startUpdateTickets(listener)
+    }
+
+    override fun onInactive() {
+        super.onInactive()
+        ticketManager.stopUpdateTickets(listener)
+    }
+
+}
+```
+**RobTicketManager：**
+```
+class RobTicketManager {
+
+    /**
+     * 开始监听余票信息
+     */
+    fun startUpdateTickets(listener: TicketListener) {
+        print("开始监听余票信息")
+        // 当监听到有余票
+        listener.onSurplusTicketChanged(2)
+    }
+
+    /**
+     * 停止监听余票信息
+     */
+    fun stopUpdateTickets(listener: TicketListener) {
+        print("停止监听余票信息")
+    }
+
+}
+
+interface TicketListener {
+    /**
+     * 余票数量变动时
+     */
+    fun onSurplusTicketChanged(num: Int) {
+
+    }
+}
+```
+**TicketLiveData :**
+```
+class TicketLiveData : LiveData<String>() {
+
+    private var ticketManager: RobTicketManager = RobTicketManager()
+
+    private val listener = object : TicketListener {
+        override fun onSurplusTicketChanged(num:Int) {
+            super.onSurplusTicketChanged(num)
+            if(num > 0){
+                value = "开始抢票了..."
+            }
+        }
+    }
+
+
+    override fun onActive() {
+        super.onActive()
+        ticketManager.startUpdateTickets(listener)
+    }
+
+    override fun onInactive() {
+        super.onInactive()
+        ticketManager.stopUpdateTickets(listener)
+    }
+
+}
+```
+
+**订阅：**
+```
+class TicketLiveDataActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_ticket_livedata)
+        //创建ViewModel
+        val viewModel = ViewModelProvider(this).get(TicketViewModel::class.java)
+        // 创建观察者
+        val userObserver = Observer<String>() {
+            tv_data.text = it
+        }
+        //建立订阅关系
+        viewModel.getLiveData().observe(this, userObserver)
+
+    }
+
+}
+```
+## 相关接口和类
+
+### MediatorLiveData的使用
++ 继承自MutableLiveData
++ 可监听多个LiveData的内容改变
++ 通过addSource()添加LiveData，来监听多个LiveData
+想添加多个，又只监听一个，则使用Transformations.switchmap（注意：若View处于InActive状态，此时，多个数据源都发生变化，当恢复至active状态时，只会获取最后添加（addSource）的LiveData的数据）
+
+下面看看具体的使用：
+
+**ViewModel:**
+```
+class MediatorViewModel : ViewModel() {
+
+    private var strLiveData: MutableLiveData<String> = MutableLiveData()
+    private var userLiveData: MutableLiveData<UserEntity> = MutableLiveData()
+
+    private var mediatorLiveData: MediatorLiveData<String> = MediatorLiveData()
+
+    init {
+        mediatorLiveData.addSource(strLiveData){
+            mediatorLiveData.value = "strLiveData:$it"
+        }
+        mediatorLiveData.addSource(userLiveData){
+            mediatorLiveData.value = "userLiveData:${it.nickName}"
+        }
+    }
+
+    fun getLiveData(): MediatorLiveData<String> {
+        return mediatorLiveData
+    }
+
+    fun changeStr(){
+        strLiveData.value = "改变字符串"
+    }
+
+    fun changeUser(){
+        val entity = UserEntity(nickName = "测试名称")
+        userLiveData.value = entity
+    }
+
+}
+```
+
+**Activity:**
+```
+class MediatorLiveDataActivity:AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_mediator_livedata)
+        //创建ViewModel
+        val viewModel = ViewModelProvider(this).get(MediatorViewModel::class.java)
+        // 创建观察者
+        val userObserver = Observer<String>() {
+            tv_data.text = it
+        }
+        //建立订阅关系
+        viewModel.getLiveData().observe(this, userObserver)
+
+        btn_str_livedata.setOnClickListener {
+            viewModel.changeStr()
+        }
+
+        btn_user_livedata.setOnClickListener {
+            viewModel.changeUser()
+        }
+
+    }
+
+}
+```
+
+## LiveData的转换
++ Transformations.map()
++ Transformations.switchMap()
+
+## 七、应用场景
 本质：都是需要在组件不同生命周期做相应操作的
 + MVP中的Presenter
 + MediaPlayer
