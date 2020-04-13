@@ -6,6 +6,7 @@ import android.os.Bundle
 import com.vinny.lifecycledemo.lifecycle.LifecycleUsedActivity
 import com.vinny.lifecycledemo.livedata.MediatorLiveDataActivity
 import com.vinny.lifecycledemo.livedata.TicketLiveDataActivity
+import com.vinny.lifecycledemo.livedata.TransformationActivity
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -26,7 +27,8 @@ class MainActivity : AppCompatActivity() {
             //startActivity(Intent(this, LiveDataActivity::class.java))
             //startActivity(Intent(this, LiveDataViewModelActivity::class.java))
             //startActivity(Intent(this, TicketLiveDataActivity::class.java))
-            startActivity(Intent(this, MediatorLiveDataActivity::class.java))
+            //startActivity(Intent(this, MediatorLiveDataActivity::class.java))
+            startActivity(Intent(this, TransformationActivity::class.java))
         }
     }
 
