@@ -3,11 +3,8 @@ package com.vinny.lifecycledemo
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.View
 import com.vinny.lifecycledemo.lifecycle.LifecycleUsedActivity
-import com.vinny.lifecycledemo.lifecycle.LifecycleUsedAppCompatActivity
-import com.vinny.lifecycledemo.livedata.LiveDataActivity
-import com.vinny.lifecycledemo.livedata.LiveDataViewModelActivity
+import com.vinny.lifecycledemo.livedata.TicketLiveDataActivity
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -26,7 +23,8 @@ class MainActivity : AppCompatActivity() {
 
         btn_livedata.setOnClickListener {
             //startActivity(Intent(this, LiveDataActivity::class.java))
-            startActivity(Intent(this, LiveDataViewModelActivity::class.java))
+            //startActivity(Intent(this, LiveDataViewModelActivity::class.java))
+            startActivity(Intent(this, TicketLiveDataActivity::class.java))
         }
     }
 

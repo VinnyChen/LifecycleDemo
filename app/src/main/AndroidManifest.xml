@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   package="com.vinny.lifecycledemo">
 
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
   <application
     android:allowBackup="true"
     android:icon="@mipmap/ic_launcher"
@@ -20,6 +22,7 @@
     <activity android:name=".lifecycle.LifecycleUsedActivity" />
     <activity android:name=".livedata.LiveDataActivity" />
     <activity android:name=".livedata.LiveDataViewModelActivity" />
+      <activity android:name=".livedata.TicketLiveDataActivity" />
   </application>
 
 </manifest>
