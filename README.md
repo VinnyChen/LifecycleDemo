@@ -8,12 +8,9 @@
     + 内部存储有一个可观察的Data对象，作为被观察者，一旦感知到变化，会通知观察者
 + 通信？
     + 创建一个观察者Observer，与LiveData达成订阅关系，可实现通信   
-## 二、怎么来的？
-    
-+ 普通的被观察者无法感知应用组件的生命周期，会导致一些不必要的操作，进而产生内存泄漏甚至直接发生崩溃；而LiveData可以感知应用组件的生命周期，即可以根据应用组件的生命周期来决定是否更新UI
-+ activity/Fragment中，需要在生命周期中做的操作很多，比如，MVP中presenter的注册与释放，MediaPlayer的注册与释放等等，这些可能根据组件生命周期变化的操作管理起来很麻烦，于是LiveData就应运而生，通过LiveData就不需要相关组件的生命周期都去操作一次
 
-## 三、优势在哪儿？
+
+## 二、优势在哪儿？
 从LiveData的来源中可以知道优势：
 + 不再需要手动处理生命周期，如Presenter
 + 因为可以感知组件生命周期，可以避免内存泄漏，因为LiveData只更新处于生命周期活跃的组件观察者
@@ -21,16 +18,7 @@
 + 配置更改（如：屏幕旋转）也不会影响数据的更新
 + 共享资源，事件总线（不建议使用）
 
-## 四、相关类介绍
-**MutableLiveData：**
-+ 继承自LiveData
-+ 提供改变容器内容的接口（setValue()/postValue()）
-
-**MediatorLiveData：**
-+ 继承自MutableLiveData
-+ 可以同时监听多个LiveData的变化，通过addSource()添加LiveData，以达到同时监听多个LiveData
-+ 
-## 五、如何使用
+## 三、如何使用
 #### **单独使用：**
 1. 创建LiveData实例
  ```
@@ -90,7 +78,7 @@ myViewModel.getMyLiveData().observe(this,nameObserver)
 myViewModel.getMyLiveData().value = "修改成功"
 ```
 
-## 六、扩展LiveData
+## 四、扩展LiveData
 有的时候，我们想要在onInActive()或者onActive()中做一些别的操作（如注册与取消广播），此时我们就需要对LiveData进行扩展,通过继承LiveData或者MutableLiveData实现扩展
 
 **TicketLiveData：**
@@ -202,7 +190,10 @@ class TicketLiveDataActivity : AppCompatActivity() {
 
 }
 ```
-## 相关接口和类
+## 五、相关接口和类
+### MutableLiveData
++ 继承自LiveData
++ 提供改变容器内容的接口（setValue()/postValue()）
 
 ### MediatorLiveData的使用
 + 继承自MutableLiveData
@@ -275,9 +266,183 @@ class MediatorLiveDataActivity:AppCompatActivity() {
 }
 ```
 
-## LiveData的转换
-+ Transformations.map()
-+ Transformations.switchMap()
+## 六、LiveData的转换
++ Transformations.map() 对value值的更改
++ Transformations.switchMap() 对LiveData的转换
+
+**Transformations.map()**
++ 当需要对LiveData其中的值进行更改时，可以使用map转换 
++ map转换之后，会将结果分派到观察中（map转换也是一个订阅的过程，由map默认实现了）
++ 参数一为源LiveData，参数二为一个方法，返回修改的值（针对其中某一个或多个属性值）
++ 使用map可以确保LiveData的数据不会传递给处于死亡状态的ViewModel和View
+
+viewModel中：
+```
+class TransformationViewModel : ViewModel() {
+
+    private val userLiveData: MutableLiveData<UserEntity> = MutableLiveData()
+
+    // 当我只需要UserEntity中的nickName和age的时候，可以使用map提取出来，并将结果分派出来
+    // Transformations.map中会创建一个观察者观察userLiveData
+    // Transformations.map中会创建一个MediatorLiveData，用来接收转换后的LiveData
+    // Transformations.map中创建的观察者中会将转换后的值setValue给新创建的MediatorLiveData，再根据订阅关系传出去
+    private val nameLiveData: LiveData<String> = Transformations.map(userLiveData) {
+        "名字：${it.nickName}--年龄：${it.age}"
+    }
+
+    fun getLiveData(): LiveData<String> {
+        return nameLiveData
+    }
+
+    fun setUserInfo() {
+        // 获取数据
+        val entity = UserEntity(nickName = "张三", age = "24",userId = "111111222222")
+        // 修改转换前的LiveData中的值,因为该LiveData存在map转换，所以会触发map中默认实现的观察者收到事件
+        userLiveData.value = entity
+    }
+
+}
+```
+
+View中：
+```
+class TransformationActivity:AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_transformation_livedata)
+        //创建ViewModel
+        val viewModel = ViewModelProvider(this).get(TransformationViewModel::class.java)
+        // 创建观察者
+        val userObserver = Observer<String>() {
+            tv_data.text = it
+        }
+        //建立订阅关系
+        viewModel.getLiveData().observe(this, userObserver)
+
+        btn_map_livedata.setOnClickListener {
+            viewModel.setUserInfo()
+        }
+    }
+
+}
+```
+总结：
++ 当我们获取数据后，若只需要提取部分数据，或者需要更改其中的某些数据，可以通过map来实现。
++ 如上所示，获取到的是一个UserEntity实体，但我们只需要其中的nickName值，于是通过map转换将UserEntity转换一次得到我们所需要的的值
++ 完整流程
+    + 两层订阅关系
+        + userObserver与 nameLiveData达成订阅关系
+        + userLiveData与map函数中实现的Observer观察者达成订阅关系
+    + 流转关系
+        + 需要哪一个数据，就观察哪一个LiveData，此处需要nickName，所以直接观察 nameLiveData
+        + viewModel.setUserInfo()中造了一个假数据，实际上应该是获取数据，获取数据之后，修改userLiveData的value值
+    + map具体实现
+        + map函数有两个参数，参数一为userLiveData（即需要转换的LiveData），参数二为一个方法，返回具体的变化值，如上面取出的名字和年龄：【${it.nickName}--年龄：${it.age}"】
+        + 内部实例化一个名为result的MediatorLiveData，存储经过转换后的数据
+        + 内部实现一个观察者（假设名称为mObserver），用来与通过map传进来的userLiveData达成订阅关系
+        + map最后会将result返回，给nameLiveData
+        + 当mObserver观察到userLiveData中的value有变化的时候，回调mObserver的onChange方法，在该方法中，会执行map函数的第二参数（一个方法），并将该方法的返回值赋值给result的value
+        + userObserver检测到nameLiveData的value发生了变化，更新UI
+
+**Transformations.switchMap()**
+viewModel中：
+```
+class TransformationViewModel : ViewModel() {
+
+    /******************************************switchmap********************************************/
+    private val clothRepository = ClothRepository()
+    private val clothIdLiveData = MutableLiveData<String>()
+    // switchMap(参数一，参数二)
+    // 参数一：源LiveData，需要被转化的LiveData
+    // 参数二：是一个方法，该方法返回一个LiveData
+    private val clothInfoLiveData = Transformations.switchMap(clothIdLiveData) {
+        clothRepository.getClothInfoById(it)
+    }
+
+    /**
+     * 获取服装信息
+     */
+    fun getClothInfo(clothId: String) {
+    // 每次clothId发生变化，都会调用clothRepository.getClothInfoById(clothId)
+        clothIdLiveData.value = clothId
+    }
+
+    /**
+     * 获取clothLiveData
+     */
+    fun getClothLiveData(): LiveData<ClothEntity> {
+        return clothInfoLiveData
+    }
+
+}
+```
+Repository中：
+```
+class ClothRepository {
+
+    fun getClothInfoById(clothId:String): MutableLiveData<ClothEntity> {
+        // 通过userId向网络或者本地获取数据
+        // 造假数据
+        val userLiveData = MutableLiveData<ClothEntity>()
+        val entity = ClothEntity()
+        entity.clothId = clothId
+        entity.clothName = "ADDS"
+        entity.price = 198.9
+        userLiveData.value = entity
+        return userLiveData
+    }
+
+}
+```
+View中：
+```
+class TransformationActivity : AppCompatActivity() {
+
+    @SuppressLint("SetTextI18n")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_transformation_livedata)
+
+        //创建ViewModel
+        val viewModel = ViewModelProvider(this).get(TransformationViewModel::class.java)
+
+        /*************************switchmap的使用*******************************/
+        // 创建观察者，观察服装信息
+        val clothObserver = Observer<ClothEntity>() {
+            tv_data.text = "switchmap:${it.clothName}"
+        }
+        // 建立订阅关系
+        viewModel.getClothLiveData().observe(this, clothObserver)
+
+        btn_switchmap_livedata.setOnClickListener {
+            val clothId = "128931234910"
+            viewModel.getClothInfo(clothId)
+        }
+    }
+
+}
+```
+总结：
++ 当我们在观察多个LiveData时，想要手动控制切换只监听其中一个LiveData，可以使用switchmap
++ switchmap(参数一，参数二)，参数一为转换前的LiveData，参数二为一个方法，方法返回一个新的LiveData
++ 如上代码所示：我们需要获取的是clothEntity，而这个clothEntity是通过clothId去获取的，于是我们可以监听clothId，当观察到clothId发生变化时，去调用clothRepository.getClothInfoById(clothId)获取clothEntity
++ 完整流程
+    + 两层订阅关系
+        +  clothObserver与clothInfoLiveData达成订阅关系
+        +  clothIdLiveData与与switchmap中的观察者达成订阅关系
+    + switchmap中
+        + 参数一名为：sourceLiveData（即传进来的clothIdLiveData），参数二为：func 
+        + 实例化一个MediatorLiveData名为result
+            + 用于添加LiveData
+            + 用来作为转换后的返回LiveData
+        +  将sourceLiveData添加到result中，达成一个订阅关系（sourceLiveData与result）
+            + 当观察到sourceLiveData中的数据发生变化，观察者在onChange中执行func方法，得到一个newLiveData
+            + 将newLiveData添加到result中，达成订阅关系（newLiveData与result）
+            + 当观察到newLiveData中的数据发生变化时，观察者在onChange中更改result的value值，往下传递，通知View层
+            + 在将newLiveData添加到result之前，其实有一个变量来临时存储newLiveData，对比两次数据是否一致，且不同的时候，需要移除上一次的newLiveData
+        + 返回result
+
 
 ## 七、应用场景
 本质：都是需要在组件不同生命周期做相应操作的
@@ -286,4 +451,4 @@ class MediatorLiveDataActivity:AppCompatActivity() {
 + 开始和停止缓冲视频
 + 开始和停止网络连接暂停和恢复动画可绘制资源
 
-## 七、源码解读
+## 八、源码解读
