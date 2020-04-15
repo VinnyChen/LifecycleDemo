@@ -26,6 +26,7 @@
     <activity android:name=".livedata.MediatorLiveDataActivity" />
     <activity android:name=".livedata.TransformationActivity" />
     <activity android:name=".viewmodel.ViewModelActivity" />
+    <activity android:name=".viewmodel.ShareViewModelActivity" />
   </application>
 
 </manifest>

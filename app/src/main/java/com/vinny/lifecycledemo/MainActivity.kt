@@ -1,13 +1,10 @@
 package com.vinny.lifecycledemo
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import com.vinny.lifecycledemo.lifecycle.LifecycleUsedActivity
-import com.vinny.lifecycledemo.livedata.MediatorLiveDataActivity
-import com.vinny.lifecycledemo.livedata.TicketLiveDataActivity
-import com.vinny.lifecycledemo.livedata.TransformationActivity
-import com.vinny.lifecycledemo.viewmodel.ViewModelActivity
+import com.vinny.lifecycledemo.viewmodel.ShareViewModelActivity
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -41,7 +38,10 @@ class MainActivity : AppCompatActivity() {
             //startActivity(Intent(this, TransformationActivity::class.java))
 
             // 跳转到ViewModel的使用介绍
-            startActivity(Intent(this, ViewModelActivity::class.java))
+            //startActivity(Intent(this, ViewModelActivity::class.java))
+
+            // 跳转到ViewModel在同一个Activity下的Fragment之间共享数据的使用介绍
+            startActivity(Intent(this, ShareViewModelActivity::class.java))
         }
     }
 

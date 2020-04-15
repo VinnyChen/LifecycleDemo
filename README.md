@@ -79,3 +79,103 @@ class ViewModelActivity : AppCompatActivity() {
 **注意：**
 
  ViewModel不能持有Activity的引用，因为ViewModel生命周期比Activity长，持有Activity的引用的话容易引起内存泄漏，如果确实需要这样的引用，则使用AndroidViewModel(application)
+ 
+ ## Fragment之间共享数据
+ 
+ > 注意只能是同一个Activity下的Fragment之间共享数据
+ 
+ 先看代码：
+ 
+** ShareViewModel:**
+```
+class ShareViewModel: ViewModel() {
+
+    private val shareLiveData = MutableLiveData<String>()
+
+    fun getShareLiveData():MutableLiveData<String>{
+        return shareLiveData
+    }
+
+    /**
+     * 发送数据
+     */
+    fun sendData(data:String){
+        shareLiveData.value = data
+    }
+}
+```
+** FirstFragment:**
+
+作为发送方发送数据
+```
+class FirstFragment : Fragment() {
+
+    private lateinit var shareViewModel: ShareViewModel
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_first, container, false)
+    }
+
+    private fun initView() {
+        //注意：此处ViewModelProvider必须填Activity中的lifecycle，不能传Fragment中的lifecycle（即this）
+        shareViewModel = activity?.let {
+            ViewModelProvider(it).get(ShareViewModel::class.java)
+        } ?: throw Exception("Invalid Activity")
+        btn_send.setOnClickListener {
+            shareViewModel.sendData("数据包")
+        }
+        shareViewModel.getShareLiveData().observe(this, Observer<String> {
+            tv_data.text = "firstFragment\n接收成功"
+        })
+    }
+
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        initView()
+    }
+
+}
+```
+
+** SecondFragment:**
+
+作为接收方接收数据
+```
+class SecondFragment : Fragment() {
+
+    private lateinit var shareViewModel: ShareViewModel
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_second, container, false)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        //注意：此处ViewModelProvider必须填Activity中的lifecycle，不能传Fragment中的lifecycle（即this）
+        shareViewModel = activity?.let {
+            ViewModelProvider(it).get(ShareViewModel::class.java)
+        } ?: throw Exception("Invalid Activity")
+        shareViewModel.getShareLiveData().observe(this, Observer<String> {
+            tv_data.text = "secondFragment\n接收成功"
+        })
+    }
+}
+```
+
+总结：
++ Activity中不需要做任何的操作，也不需要对此通信有任何的了解
++ 只对同一个Activity下的Fragment共享
++ Fragment之间相互不影响，一个Fragment消失，另一个Fragment仍旧正常工作
++ Fragment都有各自的生命周期，Fragment之间不受别的生命周期的影响
++ 不同的Fragment获取的shareViewModel是同一个
++ 在Fragment中获取shareViewModel的时候,ViewModelProvider()方法中一定传入的是activiy中的lifecycle，而不是Fragment中的lifecycle，因此，传入this是无法共享数据的
+
